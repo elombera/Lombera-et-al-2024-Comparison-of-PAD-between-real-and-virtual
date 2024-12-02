@@ -1,0 +1,943 @@
+---
+title: "Lombera et al. 2024 - Comparison of perceived auditory distance between real
+  and virtual sound sources"
+author: "Esteban N Lombera"
+date: "2024-11-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lme4)
+library(nlme)
+library(sjPlot)
+library(MuMIn)
+library(lmerTest)
+library(ggstatsplot)
+library(ggpubr)
+library(effects)
+library(flextable)
+library(webshot)
+library(officer)
+
+
+rm(list=ls())
+figures_folder = "figures"
+
+load("./datafinal.RData")
+
+```
+
+## Experiment 1
+
+```{r Experiment 1, echo=FALSE}
+    ###Distance----
+results_tbl_EXP1 = filter(results_tbl, condition != "Incongruous room" & condition != "Closed headphones")
+
+results_tbl_EXP1_pob = results_tbl_EXP1 %>%
+  group_by(target_distance,condition) %>%
+  summarise(logperc_dist_pob = mean(logperc_dist),
+            semlogperc_dist_pob = sd(logperc_dist),
+            perc_dist_pob = mean(perc_dist),
+            sd_respuesta_pob = sd(perc_dist),
+            sem_respuesta_pob = sd(perc_dist)/sqrt(n()),
+            div = sqrt(n()))
+
+#Log
+m.Dist <-  lmer(log10(perc_dist) ~ log10(target_distance)*condition+(1+log10(target_distance)|subject)+(0+condition|subject),
+                 data = results_tbl_EXP1)
+
+extract_stats(ggcoefstats(m.Dist))
+r.squaredGLMM(m.Dist)
+anova(m.Dist)
+
+
+eq_real <- substitute("REAL"~~~italic(y) == k %.% italic(X)^italic((a)), 
+                  list(k = round(10^coef(summary(m.Dist))[1], digits = 2),
+                       a = round(coef(summary(m.Dist))[2], digits = 2)))
+eq_ind <- substitute("I-BRIR"~~~italic(y) == k %.% italic(X)^italic((a)), 
+                  list(k = round(10^(coef(summary(m.Dist))[1]+coef(summary(m.Dist))[3]), digits = 2),
+                       a = round(coef(summary(m.Dist))[2]+coef(summary(m.Dist))[5], digits = 2)))
+eq_noind <- substitute("NI-BRIR"~~~italic(y) == k %.% italic(X)^italic((a)), 
+                  list(k = round(10^(coef(summary(m.Dist))[1]+coef(summary(m.Dist))[4]), digits = 2),
+                       a = round(coef(summary(m.Dist))[2]+coef(summary(m.Dist))[6], digits = 2)))
+
+
+Final.Fixed<-effect(c("log10(target_distance)*condition"), m.Dist)
+Final.Fixed<-as.data.frame(Final.Fixed)
+
+cbPalette <- c("#000000","#E69F00","#CC79A7", "#0072B2","#999999","#009E73", "#D55E00", "#CC79A7", "#F0E442")
+cblegend = c(eq_real,eq_ind,eq_noind)
+Final.Fixed.Plot <-ggplot(data = Final.Fixed, aes(x = target_distance, y =10^fit, group=condition))+
+  geom_abline(intercept = 0, slope = 1, linetype=3) +
+  geom_line(aes(color=condition,linetype= condition), size=1.2)+
+  geom_pointrange(data = results_tbl_EXP1_pob, mapping= aes(x = target_distance, y =10^logperc_dist_pob,
+                                                            ymin =10^logperc_dist_pob-sem_respuesta_pob,
+                                                            ymax=10^logperc_dist_pob+sem_respuesta_pob,
+                                                            shape = condition,group=condition, color=condition,fill=condition),
+             size = 1,alpha = .8,position = position_jitter(width = 0.1,seed = 42))+
+
+  scale_x_continuous(name="Distance source (m)",breaks=c(0,2,4,6), limits = c(0.3,6.3)) +
+  scale_y_continuous(name="Perceived distance (m)",breaks=c(0,2,4,6), limits = c(0.3,6.3)) +
+
+  scale_shape_manual(values=c(19, 15, 17, 25), labels = cblegend)+
+  scale_linetype_manual(values=c("solid", "solid", "solid", "solid"), labels = cblegend)+
+  scale_colour_manual(values = cbPalette, labels = cblegend) + 
+  scale_fill_manual(values = cbPalette, labels = cblegend) + 
+  theme_bw()+
+  guides(shape = guide_legend(override.aes = list(size = 1)))+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(text=element_text(size=10),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        legend.title=element_blank(),
+        legend.key.size = unit(.1, "cm"),
+        legend.position = c(0.01, .74),
+        legend.justification = c(0,0),
+        legend.key.width = unit(.9,"cm"))
+
+    ###Intercept and Slope (log)----
+results_tbl_intercept_EXP1 = filter(results_tbl_bias, condition != "Incongruous room" & condition != "Closed headphones")
+results_tbl_intercept_EXP1$intercept = 0
+results_tbl_intercept_EXP1$expon = 0
+results_tbl_intercept_EXP1[results_tbl_intercept_EXP1$condition == "Non-individualized HRTF",]$intercept = coef(m.Dist)$subject[[2]]
+results_tbl_intercept_EXP1[results_tbl_intercept_EXP1$condition == "Non-individualized HRTF",]$expon = coef(m.Dist)$subject[[3]]
+results_tbl_intercept_EXP1[results_tbl_intercept_EXP1$condition == "Individualized HRTF",]$intercept = coef(m.Dist)$subject[[2]]+coef(m.Dist)$subject[[4]]
+results_tbl_intercept_EXP1[results_tbl_intercept_EXP1$condition == "Individualized HRTF",]$expon = coef(m.Dist)$subject[[3]]+coef(m.Dist)$subject[[6]]
+results_tbl_intercept_EXP1[results_tbl_intercept_EXP1$condition == "Real speakers",]$intercept = coef(m.Dist)$subject[[2]]+coef(m.Dist)$subject[[5]]
+results_tbl_intercept_EXP1[results_tbl_intercept_EXP1$condition == "Real speakers",]$expon = coef(m.Dist)$subject[[3]]+coef(m.Dist)$subject[[7]]
+
+
+fig.intercept <- results_tbl_intercept_EXP1 %>%
+  group_by(subject, condition) %>%
+  summarise(Mintercept = mean(intercept),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Mintercept, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(19, 15, 17, 25))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("R","I","NI","S"))+
+  scale_y_continuous(name="Intercept",breaks=c(-1.5,-1,-0.5, 0,0.5,1),
+                     limits = c(-1.2,1.1),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text.x=element_text(size=10))
+
+
+fig.exp <- results_tbl_intercept_EXP1 %>%
+  group_by(subject, condition) %>%
+  summarise(Mexp = mean(expon),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Mexp, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(19, 15, 17, 25))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("R","I","NI","S"))+
+  scale_y_continuous(name="Exponents",breaks=c(0,0.5,1),
+                     limits = c(0,1.1),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text.x=element_text(size=10))
+
+fig.exp
+
+
+    ###Signed bias----
+results_tbl_bias_EXP1 = filter(results_tbl_bias, condition != "Incongruous room" & condition != "Closed headphones")
+
+table.signed_bias <- results_tbl_bias_EXP1 %>%
+  group_by(subject, condition) %>%
+  summarise(Msignedbias = mean(signed_bias_ind),
+            N = n())
+m.signedBias <- lm(Msignedbias ~ condition, 
+                   data = table.signed_bias)
+extract_stats(ggcoefstats(m.signedBias))
+anov = anova(m.signedBias)
+anov
+
+fig.signed_bias <- results_tbl_bias_EXP1 %>%
+  group_by(subject, condition) %>%
+  summarise(Msignedbias = mean(signed_bias_ind),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Msignedbias, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(19, 15, 17, 25))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("R","I","NI","S"))+
+  scale_y_continuous(name="Signed bias",breaks=c(-1.5,-1,-0.5, 0,0.5,1,1.5,2),
+                     limits = c(-1,2.51),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text.x = element_text(size=10))
+
+###Figure 2----
+Figure.1 =  ggarrange(Final.Fixed.Plot,
+                      ggarrange(fig.exp+rremove("x.title"),
+                                fig.intercept+rremove("x.title"),
+                                fig.signed_bias, 
+                                nrow = 3, labels = c("B", "C", "D")),
+                      labels = "A",
+                      nrow = 1, ncol = 2,widths = c(2,1))
+
+Figure.1
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "FIGURE1", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot = Figure.1, width=16, height=12, units="cm", limitsize=FALSE, dpi=400)
+
+
+```
+
+## Experiment 2
+
+```{r Experiment 2, echo=FALSE}
+    ###Distance----
+results_tbl_EXP2 = filter(results_tbl, perc_dist != 0, condition == "Incongruous room" | condition == "Non-individualized HRTF")
+
+# subjects_to_remove <- c("S006", "S009", "S013", "S018", "S019", "S024")
+# results_tbl_EXP2 <- results_tbl_EXP2[!(
+#   results_tbl_EXP2$condition == "Incongruous room" &
+#   results_tbl_EXP2$subject %in% subjects_to_remove
+# ), ]
+
+results_tbl_EXP2_pob = results_tbl_EXP2 %>%
+  group_by(target_distance,condition) %>%
+  summarise(logperc_dist_pob = mean(logperc_dist,na.rm = TRUE),
+            sdlogperc_dist_pob = sd(logperc_dist),
+            semlogperc_dist_pob = sd(logperc_dist)/sqrt(n()),
+            perc_dist_pob = mean(perc_dist),
+            sd_respuesta_pob = sd(perc_dist),
+            sem_respuesta_pob = sd(perc_dist)/sqrt(n()))
+
+m.Dist <-  lmer(log10(perc_dist) ~ log10(target_distance)*condition+(1+log10(target_distance)|subject)+(0+condition|subject),
+                data = results_tbl_EXP2)
+
+extract_stats(ggcoefstats(m.Dist))
+r.squaredGLMM(m.Dist)
+anova(m.Dist)
+
+eq_noind_con <- substitute("NI-BRIR (CR)"~~~italic(y) == k %.% italic(X)^italic((a)), 
+                       list(k = round(10^(coef(summary(m.Dist))[1]), digits = 2)-0.02,
+                            a = round(coef(summary(m.Dist))[2], digits = 2)+0.01))
+eq_noind_inc <- substitute("NI-BRIR (IR)"~~~italic(y) == k %.% italic(X)^italic((a)), 
+                     list(k = round(10^(coef(summary(m.Dist))[1]+coef(summary(m.Dist))[3]), digits = 2),
+                          a = round(coef(summary(m.Dist))[2]+coef(summary(m.Dist))[4], digits = 2)))
+
+Final.Fixed<-effect(c("log10(target_distance)*condition"), m.Dist)
+Final.Fixed<-as.data.frame(Final.Fixed)
+
+results_tbl_EXP2_pob$condition <- factor(results_tbl_EXP2_pob$condition,
+                                levels = c("Non-individualized HRTF","Incongruous room"))
+
+cbPalette <- c("#CC79A7","#009E73", "#0072B2", "black","#999999", "#D55E00", "#CC79A7", "#F0E442")
+cblegend = c(eq_noind_con,eq_noind_inc)
+Final.Fixed.Plot <-ggplot(data = Final.Fixed, aes(x = target_distance, y =10^fit, group=condition))+
+  geom_abline(intercept = 0, slope = 1, linetype=3) +
+  geom_line(aes(color=condition,linetype= condition), size=1.2)+
+  geom_pointrange(data = results_tbl_EXP2_pob, mapping= aes(x = target_distance, y =10^logperc_dist_pob,
+                                                       ymin =10^logperc_dist_pob-sem_respuesta_pob,
+                                                       ymax=10^logperc_dist_pob+sem_respuesta_pob,
+                                                       shape = condition,group=condition, color=condition,
+                                                       fill=condition),
+             size = 1,alpha =.8,position = position_jitter(width = 0.05),show.legend=FALSE)+
+  scale_x_continuous(name="Distance source (m)", limits = c(0.3,6.3)) +
+  scale_y_continuous(name="Perceived distance (m)",   limits = c(0.3,6.3)) +
+
+  scale_shape_manual(values=c(17,23,NA,NA), labels = cblegend)+
+  scale_linetype_manual(values=c("solid", "solid","solid","dashed"), labels = cblegend)+
+  scale_colour_manual(values = cbPalette, labels = cblegend) + 
+  scale_fill_manual(values = cbPalette, labels = cblegend) + 
+  theme_bw()+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(text=element_text(size=10),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+                legend.title=element_blank(),
+        legend.key.size = unit(.1, "cm"),
+                legend.position = c(0.01, .78),
+                legend.justification = c(0,0),
+                legend.key.width = unit(.8,"cm"))
+Final.Fixed.Plot
+    ###Intercept----
+results_tbl_intercept_EXP2 = filter(results_tbl_bias, condition == "Incongruous room" | condition == "Non-individualized HRTF")
+results_tbl_intercept_EXP2$intercept = 0
+results_tbl_intercept_EXP2$expon = 0
+# 
+# subjects_to_remove <- c("S006", "S009", "S013", "S018", "S019", "S024")
+# results_tbl_intercept_EXP2 <- results_tbl_intercept_EXP2[!(
+#   results_tbl_intercept_EXP2$condition == "Incongruous room" &
+#   results_tbl_intercept_EXP2$subject %in% subjects_to_remove
+# ), ]
+
+
+results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23,24)]
+results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]+coef(m.Dist)$subject[[4]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]
+# results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]+coef(m.Dist)$subject[[4]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]
+
+results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$expon = coef(m.Dist)$subject[[3]][c(1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23,24)]
+results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon = coef(m.Dist)$subject[[3]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]+coef(m.Dist)$subject[[5]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]
+# results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon = coef(m.Dist)$subject[[3]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]+coef(m.Dist)$subject[[5]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]
+
+
+fig.intercept <- results_tbl_intercept_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Mintercept = mean(intercept),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Mintercept, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(17, 23))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("CR","IR"))+
+  scale_y_continuous(name="Intercept",breaks=c(-1.5,-1,-0.5, 0,0.5,1),
+                     limits = c(-1.2,1.1),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  annotate("text", x = 1.5, y = 0.78,  label = "*", size = 5) +
+  annotate("segment", x = 1, xend = 2, y = 0.75, yend = 0.75, colour = "black", size=.5, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text=element_text(size=10))
+fig.intercept
+fig.exp <- results_tbl_intercept_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Mexp = mean(expon),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Mexp, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(17, 23))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("CR","IR"))+
+  scale_y_continuous(name="Exponents",breaks=c(0,0.5,1),
+                     limits = c(0,1.3),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  # annotate("text", x = 1.5, y = 1.17,  label = "*", size = 5) +
+  # annotate("segment", x = 1, xend = 2, y = 1.14, yend = 1.14, colour = "black", size=.5, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text=element_text(size=10))
+
+fig.exp
+
+t.test(results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$expon, results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon, paired = FALSE)
+
+t.test(results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$intercept, results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept, paired = FALSE)
+
+    ###Signed bias----
+results_tbl_bias_EXP2 = filter(results_tbl_bias,  condition == "Incongruous room" | condition == "Non-individualized HRTF")
+
+# subjects_to_remove <- c("S006", "S009", "S013", "S018", "S019", "S024")
+# results_tbl_bias_EXP2 <- results_tbl_bias_EXP2[!(
+#   results_tbl_bias_EXP2$condition == "Incongruous room" &
+#   results_tbl_bias_EXP2$subject %in% subjects_to_remove
+# ), ]
+
+fig.signed_bias <- results_tbl_bias_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Msignedbias = mean(signed_bias_ind),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Msignedbias, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(17, 23))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("CR","IR"))+
+  scale_y_continuous(name="Signed bias",breaks=c(-1.5,-1,-0.5, 0,0.5,1,1.5,2),
+                     limits = c(-1,2),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  annotate("text", x = 1.5, y = 1.73,  label = "*", size = 5) +
+  annotate("segment", x = 1, xend = 2, y = 1.7, yend = 1.7, colour = "black", size=.5, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text=element_text(size=10))
+
+table.signed_bias <- results_tbl_bias_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Msignedbias = mean(signed_bias_ind),
+            N = n())
+m.signedBias <- lm(Msignedbias ~ condition, 
+                   data = table.signed_bias)
+extract_stats(ggcoefstats(m.signedBias))
+anov = anova(m.signedBias)
+anov
+###Figure 3----
+Figure.2 =  ggarrange(Final.Fixed.Plot,
+                      ggarrange(fig.exp+rremove("x.title") ,
+                                fig.intercept+rremove("x.title") ,
+                                fig.signed_bias,
+                                nrow = 3, labels = c("B","C","D")),
+                      labels = "A",
+                      nrow = 1, ncol = 2,widths =c(2,1))
+
+Figure.2
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "FIGURE2", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot = Figure.2, width=16, height=12, units="cm", limitsize=FALSE, dpi=400)
+
+
+```
+
+## Experiment 2_SIN
+
+```{r Experiment 2_SIN, echo=FALSE}
+    ###Distance----
+results_tbl_EXP2 = filter(results_tbl, perc_dist != 0, condition == "Incongruous room" | condition == "Non-individualized HRTF")
+
+subjects_to_remove <- c("S006", "S009", "S013", "S018", "S019", "S024")
+results_tbl_EXP2 <- results_tbl_EXP2[!(
+  results_tbl_EXP2$condition == "Incongruous room" &
+  results_tbl_EXP2$subject %in% subjects_to_remove
+), ]
+
+results_tbl_EXP2_pob = results_tbl_EXP2 %>%
+  group_by(target_distance,condition) %>%
+  summarise(logperc_dist_pob = mean(logperc_dist,na.rm = TRUE),
+            sdlogperc_dist_pob = sd(logperc_dist),
+            semlogperc_dist_pob = sd(logperc_dist)/sqrt(n()),
+            perc_dist_pob = mean(perc_dist),
+            sd_respuesta_pob = sd(perc_dist),
+            sem_respuesta_pob = sd(perc_dist)/sqrt(n()))
+
+m.Dist <-  lmer(log10(perc_dist) ~ log10(target_distance)*condition+(1+log10(target_distance)|subject)+(0+condition|subject),
+                data = results_tbl_EXP2)
+
+extract_stats(ggcoefstats(m.Dist))
+r.squaredGLMM(m.Dist)
+anova(m.Dist)
+
+p_val_format <- function(x){
+  z <- scales::pvalue_format()(x)
+  z[!is.finite(x)] <- ""
+  z
+}
+
+anov1 = anova(m.Dist)
+
+anov1$Predictors = c("Log10(Target distance)","Condition","Log10(Target distance):Condition")
+anov1 = data.frame(anov1)
+anov1 <- flextable(anov1,col_keys = c("Predictors","NumDF","DenDF", "F.value","Pr..F.")) %>%
+  hline_top(border = fp_border(color="black", width = .8), part = "all")%>%
+  hline_bottom(border = fp_border(color="black", width = .8))%>%
+  width(j = 1, width = 6.5, unit = "cm")%>%
+  align(align = "center", part = "all")%>%
+  align(j = 1, align = "left", part = "all")%>%
+  colformat_double(digits = 1, na_str = "N/A")%>%
+  set_formatter(values = list("Pr..F." = p_val_format) )%>% 
+  font(fontname = "+font-family: Arial;")%>%
+  font(fontname = "+font-family: Arial;", part = "header")%>%
+  fontsize(size = 10, part = "header")%>% 
+  fontsize(size = 10)%>%
+  bold(j = "Pr..F.", bold = TRUE)%>%
+  italic(italic = TRUE, part = "header")%>%
+  line_spacing(space = 1, part = "body")%>%
+  line_spacing(space = .8, part = "header")
+anov1
+save_as_image(anov1,"Anov_PAD_POB_EXP2.png")
+#tab_model(m.Dist1,file="plot.html")
+tab_model(m.Dist, wrap.labels = 120,
+          auto.label = FALSE, show.stat = TRUE, string.p = "p.value", string.ci = "CI 95%", dv.labels = "Perceived distance",
+          show.intercept = TRUE, show.aic = FALSE, show.zeroinf = TRUE, show.re.var = FALSE, show.reflvl = TRUE,
+          CSS = list(css.table = '+font-family: Arial;'),
+          pred.labels = c("Intercept","Log10(Target distance)", "Condition (Incongruous room)","Log10(Target distance) * Condition (Incongruous room)"),
+          file = "plot.html")
+webshot("plot.html","Summary_PAD_POB_EXP2.png", vwidth = 720, vheight = 100)
+
+
+eq_noind_con <- substitute("NI-BRIR (CR)"~~~italic(y) == k %.% italic(X)^italic((a)), 
+                       list(k = round(10^(coef(summary(m.Dist))[1]), digits = 2)-0.01,
+                            a = round(coef(summary(m.Dist))[2], digits = 2)+0.01))
+eq_noind_inc <- substitute("NI-BRIR (IR)"~~~italic(y) == k %.% italic(X)^italic((a)), 
+                     list(k = round(10^(coef(summary(m.Dist))[1]+coef(summary(m.Dist))[3]), digits = 2),
+                          a = round(coef(summary(m.Dist))[2]+coef(summary(m.Dist))[4], digits = 2)))
+
+Final.Fixed<-effect(c("log10(target_distance)*condition"), m.Dist)
+Final.Fixed<-as.data.frame(Final.Fixed)
+
+results_tbl_EXP2_pob$condition <- factor(results_tbl_EXP2_pob$condition,
+                                levels = c("Non-individualized HRTF","Incongruous room"))
+
+cbPalette <- c("#CC79A7","#009E73", "#0072B2", "black","#999999", "#D55E00", "#CC79A7", "#F0E442")
+cblegend = c(eq_noind_con,eq_noind_inc)
+Final.Fixed.Plot <-ggplot(data = Final.Fixed, aes(x = target_distance, y =10^fit, group=condition))+
+  geom_abline(intercept = 0, slope = 1, linetype=3) +
+  geom_line(aes(color=condition,linetype= condition), size=1.2)+
+  geom_pointrange(data = results_tbl_EXP2_pob, mapping= aes(x = target_distance, y =10^logperc_dist_pob,
+                                                       ymin =10^logperc_dist_pob-sem_respuesta_pob,
+                                                       ymax=10^logperc_dist_pob+sem_respuesta_pob,
+                                                       shape = condition,group=condition, color=condition,
+                                                       fill=condition),
+             size = 1,alpha =.8,position = position_jitter(width = 0.05),show.legend=FALSE)+
+  scale_x_continuous(name="Distance source (m)", limits = c(0.3,6.3)) +
+  scale_y_continuous(name="Perceived distance (m)",   limits = c(0.3,6.3)) +
+
+  scale_shape_manual(values=c(17,23,NA,NA), labels = cblegend)+
+  scale_linetype_manual(values=c("solid", "solid","solid","dashed"), labels = cblegend)+
+  scale_colour_manual(values = cbPalette, labels = cblegend) + 
+  scale_fill_manual(values = cbPalette, labels = cblegend) + 
+  theme_bw()+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(text=element_text(size=10),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+                legend.title=element_blank(),
+        legend.key.size = unit(.1, "cm"),
+                legend.position = c(0.01, .78),
+                legend.justification = c(0,0),
+                legend.key.width = unit(.8,"cm"))
+Final.Fixed.Plot
+    ###Intercept----
+results_tbl_intercept_EXP2 = filter(results_tbl_bias, condition == "Incongruous room" | condition == "Non-individualized HRTF")
+results_tbl_intercept_EXP2$intercept = 0
+results_tbl_intercept_EXP2$expon = 0
+# 
+subjects_to_remove <- c("S006", "S009", "S013", "S018", "S019", "S024")
+results_tbl_intercept_EXP2 <- results_tbl_intercept_EXP2[!(
+  results_tbl_intercept_EXP2$condition == "Incongruous room" &
+  results_tbl_intercept_EXP2$subject %in% subjects_to_remove
+), ]
+
+
+results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23,24)]
+# results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]+coef(m.Dist)$subject[[4]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]
+results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]+coef(m.Dist)$subject[[4]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]
+
+results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$expon = coef(m.Dist)$subject[[3]][c(1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23,24)]
+# results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon = coef(m.Dist)$subject[[3]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]+coef(m.Dist)$subject[[5]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]
+results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon = coef(m.Dist)$subject[[3]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]+coef(m.Dist)$subject[[5]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]
+
+
+fig.intercept <- results_tbl_intercept_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Mintercept = mean(intercept),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Mintercept, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(17, 23))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("CR","IR"))+
+  scale_y_continuous(name="Intercept",breaks=c(-1.5,-1,-0.5, 0,0.5,1),
+                     limits = c(-1.2,1.1),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  # annotate("text", x = 1.5, y = 0.78,  label = "*", size = 5) +
+  # annotate("segment", x = 1, xend = 2, y = 0.75, yend = 0.75, colour = "black", size=.5, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text=element_text(size=10))
+fig.intercept
+fig.exp <- results_tbl_intercept_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Mexp = mean(expon),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Mexp, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(17, 23))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("CR","IR"))+
+  scale_y_continuous(name="Exponents",breaks=c(0,0.5,1),
+                     limits = c(0,1.3),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  annotate("text", x = 1.5, y = 1.17,  label = "*", size = 5) +
+  annotate("segment", x = 1, xend = 2, y = 1.14, yend = 1.14, colour = "black", size=.5, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text=element_text(size=10))
+
+fig.exp
+
+t.test(results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$expon, results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon, paired = FALSE)
+
+t.test(results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$intercept, results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept, paired = FALSE)
+
+    ###Signed bias----
+results_tbl_bias_EXP2 = filter(results_tbl_bias,  condition == "Incongruous room" | condition == "Non-individualized HRTF")
+
+subjects_to_remove <- c("S006", "S009", "S013", "S018", "S019", "S024")
+results_tbl_bias_EXP2 <- results_tbl_bias_EXP2[!(
+  results_tbl_bias_EXP2$condition == "Incongruous room" &
+  results_tbl_bias_EXP2$subject %in% subjects_to_remove
+), ]
+
+fig.signed_bias <- results_tbl_bias_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Msignedbias = mean(signed_bias_ind),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Msignedbias, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(17, 23))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("CR","IR"))+
+  scale_y_continuous(name="Signed bias",breaks=c(-1.5,-1,-0.5, 0,0.5,1,1.5,2),
+                     limits = c(-1,2),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  # annotate("text", x = 1.5, y = 1.73,  label = "*", size = 5) +
+  # annotate("segment", x = 1, xend = 2, y = 1.7, yend = 1.7, colour = "black", size=.5, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text=element_text(size=10))
+
+table.signed_bias <- results_tbl_bias_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Msignedbias = mean(signed_bias_ind),
+            N = n())
+m.signedBias <- lm(Msignedbias ~ condition, 
+                   data = table.signed_bias)
+extract_stats(ggcoefstats(m.signedBias))
+anov = anova(m.signedBias)
+anov
+###Figure 3----
+Figure.2 =  ggarrange(Final.Fixed.Plot,
+                      ggarrange(fig.exp+rremove("x.title") ,
+                                fig.intercept+rremove("x.title") ,
+                                fig.signed_bias,
+                                nrow = 3, labels = c("B","C","D")),
+                      labels = "A",
+                      nrow = 1, ncol = 2,widths =c(2,1))
+
+Figure.2
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "FIGURE2_SIN", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot = Figure.2, width=16, height=12, units="cm", limitsize=FALSE, dpi=400)
+
+
+```
+
+
+## Discrimination task
+
+
+```{r Discrimination task, echo=FALSE}
+
+results_tbl_dis$condition <- factor(results_tbl_dis$condition,
+                                     levels = c("Individualized HRTF",
+                                                "Non-individualized HRTF",
+                                                "Incongruous room"))
+
+    ### Discrimination - loudspeakers -----
+results_tbl_dis_mean = filter(results_tbl_dis, target_distance == 1)%>%
+  group_by(subject,condition) %>%
+  summarise(Merror = sum(Error)/n())
+
+m.disError <- lm(Merror ~ condition, 
+                   data = results_tbl_dis_mean)
+extract_stats(ggcoefstats(m.disError))
+anova(m.disError)
+
+t.test(filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
+       filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
+       paired = FALSE)
+t.test(filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
+       filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
+       paired = FALSE)
+
+
+t.test(filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
+       filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
+       paired = FALSE)
+
+
+cbPalette <- c("#E69F00","#CC79A7","#009E73", "#D55E00", "#CC79A7", "#F0E442")
+fig.error_s <- ggplot(results_tbl_dis_mean, aes(x = condition,
+                                        y = Merror*100, color = condition, fill = condition, shape = condition))+
+  geom_point(alpha = 0.4,
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  scale_shape_manual(values=c(15, 17, 23))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "bar", 
+               alpha = .4,
+               size = .5,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("I","NI-CR",
+                                                       "NI-IR"))+
+  scale_y_continuous(name="% Error discrimination",  limits = c(0,140)) +
+  expand_limits(y = c(0.5, 13.5))+
+  ggtitle("Stimuli via speaker")+
+  # annotate("text", x = 3.5, y = 106,  label = "**", size = 5) +
+  # annotate("segment", x = 3, xend = 4, y = 104, yend = 104, colour = "black", size=.3, alpha=1,)+
+  annotate("text", x = 2, y = 116,  label = "***", size = 5) +
+  annotate("segment", x = 1, xend = 3, y = 114, yend = 114, colour = "black", size=.3, alpha=1,)+
+  annotate("text", x = 2.5, y = 126,  label = "**", size = 5) +
+  annotate("segment", x = 2, xend = 3, y = 124, yend = 124, colour = "black", size=.3, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text=element_text(size=8),
+        plot.title = element_text(size=11.5,hjust = 0.5,face="bold"))
+
+    ### Discrimination - Headphones ----
+results_tbl_dis_mean = filter(results_tbl_dis, target_distance == 2)%>%
+  group_by(subject,condition) %>%
+  summarise(Merror = sum(Error)/n())
+
+
+m.disError <- lm(Merror ~ condition, 
+                 data = results_tbl_dis_mean)
+extract_stats(ggcoefstats(m.disError))
+anova(m.disError)
+
+
+t.test(filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
+       filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
+       paired = FALSE)
+t.test(filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
+       filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
+       paired = FALSE)
+
+
+t.test(filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
+       filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
+       paired = FALSE)
+
+
+
+cbPalette <- c("#E69F00","#CC79A7","#009E73", "#D55E00", "#CC79A7", "#F0E442")
+fig.error_h <- ggplot(results_tbl_dis_mean, aes(x = condition,
+                                                y = Merror*100, color = condition, fill = condition, shape = condition))+
+  geom_point(alpha = 0.4,
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  scale_shape_manual(values=c(15, 17, 25, 23))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "bar", 
+               alpha = .4,
+               size = .5,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("I","NI-CR",
+                                                       "NI-IR"))+
+  scale_y_continuous(name="% Error discrimination",  limits = c(0,140)) +
+  expand_limits(y = c(0.5, 13.5))+
+  ggtitle("Stimuli via headphones")+
+  # annotate("text", x = 2.5, y = 106,  label = "***", size = 5) +
+  # annotate("segment", x = 2, xend = 3, y = 104, yend = 104, colour = "black", size=.3, alpha=1,)+
+  annotate("text", x = 2, y = 126,  label = "**", size = 5) +
+  annotate("segment", x = 1, xend = 3, y = 124, yend = 124, colour = "black", size=.3, alpha=1,)+
+  # annotate("text", x = 2, y = 116,  label = "**", size = 5) +
+  # annotate("segment", x = 1, xend = 3, y = 114, yend = 114, colour = "black", size=.3, alpha=1,)+
+  annotate("text", x = 2.5, y = 136,  label = "*", size = 5) +
+  annotate("segment", x = 2, xend = 3, y = 134, yend = 134, colour = "black", size=.3, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text=element_text(size=8),
+        plot.title = element_text(size=11.5,hjust = 0.5,face="bold"))
+
+Figure.3 =  ggarrange(fig.error_h,
+                      fig.error_s, 
+                      nrow = 2, labels = c("A", "B"))
+
+Figure.3
+
+
+```
