@@ -318,6 +318,7 @@ results_tbl_bias_EXP2 = filter(results_tbl_bias,  condition == "Incongruous room
 fig.signed_bias <- results_tbl_bias_EXP2 %>%
   group_by(subject, condition) %>%
   summarise(Msignedbias = mean(signed_bias_ind),
+            Msignedbias = mean(sd_persigned_bias_ind),
             N = n()) %>%
   ungroup() %>%
   ggplot(aes(x = condition, 
@@ -422,6 +423,175 @@ p <- cor.test(results_a$intercept, results_a$Merror)$p.value
 
 fig8 = ggplot(results_a, aes(x = intercept, y = Merror))+
 
+  geom_smooth(method="lm", col="black") + 
+  annotate("text", x=0, y=1, label=paste0("r = ", r), hjust=0) +
+  annotate("text", x=0, y=0.9, label=paste0("p = ", round(p, 4)), hjust=0) +
+  geom_point(data = results_a, aes(x = intercept, y = Merror), shape = 17, color = "#CC79A7", size = 4)+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) + 
+  xlab("Intercept")+
+  ylab("Merror")+
+  theme_classic() 
+
+fig8
+
+b = ggarrange(fig0+rremove("xlab"),fig1+rremove("xlab"),fig2+rremove("xlab"),fig4,fig5,fig6,
+              ncol=3, nrow=2, labels = c("A", "B", "C","D", "E", "F"),common.legend = TRUE, legend="bottom")
+b
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Pearhttp://127.0.0.1:23613/graphics/9acba65b-6e8b-4198-8037-196659a43594.pngson", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot = b, width=20, height=15, units="cm", limitsize=FALSE, dpi=200)
+
+
+
+
+
+
+fig.signed_bias <- results_tbl_bias_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Msignedbias = mean(signed_bias_ind),
+            Msignedbias = mean(sd_persigned_bias_ind),
+            N = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = condition, 
+             y = Msignedbias, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 0.4, 
+             position = position_jitterdodge(jitter.width = .3,
+                                             jitter.height = 0,
+                                             dodge.width = 1 )) +
+  geom_violin(alpha=.2)+
+  scale_shape_manual(values=c(17, 23))+
+  geom_abline(slope = 0, 
+              intercept = 0, 
+              alpha = 0.5, 
+              linetype = "dashed") +
+  stat_summary(fun.data = "mean_se", 
+               geom = "point", 
+               alpha = 1,
+               size = 3,
+               position = position_dodge(width = 1.5)) +
+  stat_summary(fun.data = "mean_se", 
+               geom = "linerange",  
+               size=1, 
+               position = position_dodge(width = 1)) +
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  scale_x_discrete(name="Condition",labels = c("CR","IR"))+
+  scale_y_continuous(name="Signed bias",breaks=c(-1.5,-1,-0.5, 0,0.5,1,1.5,2),
+                     limits = c(-1,2),expand= c(0,0)) +
+  expand_limits(y = c(0.5, 13.5))+
+  annotate("text", x = 1.5, y = 1.73,  label = "*", size = 5) +
+  annotate("segment", x = 1, xend = 2, y = 1.7, yend = 1.7, colour = "black", size=.5, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "none",axis.text=element_text(size=10))
+
+table.signed_bias <- results_tbl_bias_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Msignedbias = mean(signed_bias_ind),
+            N = n())
+m.signedBias <- lm(Msignedbias ~ condition, 
+                   data = table.signed_bias)
+extract_stats(ggcoefstats(m.signedBias))
+anov = anova(m.signedBias)
+anov
+###Figure 3----
+Figure.2 =  ggarrange(Final.Fixed.Plot,
+                      ggarrange(fig.exp+rremove("x.title") ,
+                                fig.intercept+rremove("x.title") ,
+                                fig.signed_bias+rremove("x.title"),
+                                ncol = 3, labels = c("B", "C","D")),
+                      labels = "A",
+                      ncol = 1, nrow = 2,heights =c(2,1))
+
+Figure.2
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "FIGURE2_SIN2", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot = Figure.2, width=12, height=14, units="cm", limitsize=FALSE, dpi=400)
+
+
+Figure.22 =  ggarrange(fig.exp+rremove("x.title"),
+                       fig.exp2+rremove("x.title"),
+                       fig.intercept+rremove("x.title") ,
+                       fig.intercept2+rremove("x.title") ,
+                       ncol = 2, nrow = 2, labels = c("A","A_2", "B","B_2"),
+                       heights =c(1,1))
+
+Figure.22
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "ASD", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot = Figure.22, width=14, height=14, units="cm", limitsize=FALSE, dpi=400)
+
+
+library(Routliers)
+
+tabla.ind.Eye <- results_tbl_intercept_EXP2 %>% 
+  filter(condition == "Incongruous room") %>% 
+  ungroup()
+res3 <- outliers_mad(x = tabla.ind.Eye$intercept,threshold = 2 ,na.rm=TRUE)
+plot_outliers_mad(res3,x=tabla.ind.Eye$intercept,pos_display=TRUE)
+tabla.ind.Eye[res3$outliers_pos,] 
+
+
+a = results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]
+subjects_to_remove <- c("S025")
+a <- a[!(
+  a$condition == "Incongruous room" &
+    a$subject %in% subjects_to_remove
+), ]
+
+
+### SD analisis ------
+results_tbl_sd = filter(results_tbl,  condition == "Incongruous room" | condition == "Non-individualized HRTF")
+cbPalette <- c("#CC79A7","#009E73", "#0072B2", "black","#999999", "#D55E00", "#CC79A7", "#F0E442")
+table_sd <- results_tbl_sd %>%
+  group_by(condition,target_distance) %>%
+  summarise(SDPerc = sd(perc_dist, na.rm = TRUE),
+            N = n()) %>%
+  ungroup()
+  a = ggplot(table_sd, aes(x = target_distance, 
+             y = SDPerc, 
+             colour = condition, 
+             fill = condition,
+             shape = condition)) +
+  geom_point(alpha = 1) +
+    geom_line()+
+  
+  scale_shape_manual(values=c(17, 23))+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +
+  # scale_x_discrete(name="Condition",labels = c("CR","IR"))+
+  # scale_y_continuous(name="Signed bias",breaks=c(0,0.5,1,1.5,2),
+  #                    limits = c(0,3),expand= c(0,0)) +
+  # expand_limits(y = c(0.5, 13.5))+
+  # annotate("text", x = 1.5, y = 1.73,  label = "*", size = 5) +
+  # annotate("segment", x = 1, xend = 2, y = 1.7, yend = 1.7, colour = "black", size=.5, alpha=1,)+
+  theme_pubr(base_size = 10, margin = TRUE)+
+  theme(legend.position = "top",axis.text=element_text(size=10))
+a
+  fig.signed_bias
+table.signed_bias <- results_tbl_bias_EXP2 %>%
+  group_by(subject, condition) %>%
+  summarise(Msignedbias = mean(signed_bias_ind),
+            N = n())
+m.signedBias <- lm(Msignedbias ~ condition, 
+                   data = table.signed_bias)
+extract_stats(ggcoefstats(m.signedBias))
+anov = anova(m.signedBias)
+anov
+#-----
+# b = results_tbl_dis_mean[results_tbl_dis_mean$condition == "Incongruous room",]
+# subjects_to_remove <- c("S003", "S012","S025")
+# b <- b[!(
+#   b$condition == "Incongruous room" &
+#     b$subject %in% subjects_to_remove
+# ), ]
+# results_a = merge(a,b, all = TRUE)
+
+r <- round(cor(results_a$intercept, results_a$Merror), 2)
+p <- cor.test(results_a$intercept, results_a$Merror)$p.value
+
+fig8 = ggplot(results_a, aes(x = intercept, y = Merror))+
+  
   geom_smooth(method="lm", col="black") + 
   annotate("text", x=0, y=1, label=paste0("r = ", r), hjust=0) +
   annotate("text", x=0, y=0.9, label=paste0("p = ", round(p, 4)), hjust=0) +
