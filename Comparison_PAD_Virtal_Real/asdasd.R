@@ -392,14 +392,16 @@ ggsave(mi_nombre_de_archivo, plot = Figure.22, width=14, height=14, units="cm", 
 
 
 library(Routliers)
-
+idx = results_tbl_EXP2$perc_dist == 0
+results_tbl_EXP2[idx,]$perc_dist = 0.1
+results_tbl_EXP2$logperc_dist = log10(results_tbl_EXP2$perc_dist)
 tabla.ind.Eye <- results_tbl_intercept_EXP2 %>% 
   filter(condition == "Incongruous room") %>% 
   ungroup()
-res3 <- outliers_mad(x = tabla.ind.Eye$intercept,threshold = 2 ,na.rm=TRUE)
+res3 <- outliers_mad(x = tabla.ind.Eye$intercept,threshold = .5 ,na.rm=TRUE)
 plot_outliers_mad(res3,x=tabla.ind.Eye$intercept,pos_display=TRUE)
-tabla.ind.Eye[res3$outliers_pos,] 
-
+tabla.ind.Eye[res3$outliers_pos,]
+tabla.ind.Eye[res3$outliers_pos,] $intercept
 
 a = results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]
 subjects_to_remove <- c("S025")
