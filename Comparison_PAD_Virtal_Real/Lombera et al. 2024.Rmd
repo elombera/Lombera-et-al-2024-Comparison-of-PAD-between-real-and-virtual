@@ -580,73 +580,6 @@ extract_stats(ggcoefstats(m.signedBias))
 anov = anova(m.signedBias)
 anov
 
-### Rango
-results_tbl_EXP22 = filter(results_tbl, condition == "Incongruous room" | condition == "Non-individualized HRTF")
-a1 <- filter(results_tbl_EXP22, target_distance == 6| target_distance == 1)%>%
-  group_by(subject,condition,target_distance) %>%
-  summarise(perc_dist = perc_dist)%>%
-  ungroup()
-
-a6 = a1[a1$target_distance == 6,]
-a6 = rename(a6, c(perc_dist = "perc_dist6"))
-a6 = rename(a6, c(target_distance = "target_distance6"))
-
-a2 = a1[a1$target_distance == 1,]
-a2 = rename(a2, c(perc_dist ="perc_dist1"))
-a2 = rename(a2, c(target_distance = "target_distance1"))
-results_tblrange  = merge(x = a2, y = a6, all.x = TRUE)
-results_tblrange$range = results_tblrange$perc_dist6 -  results_tblrange$perc_dist1 
-
-range <- results_tblrange %>% 
-  group_by(subject,condition) %>%
-  summarise(mrange  = mean(range,na.rm=TRUE),
-            SDrange  = sd(range,na.rm=TRUE)/sqrt(length(range)))  %>%
-  ungroup()
-
-t.test(range[range$condition == "Non-individualized HRTF",]$mrange, range[range$condition ==  "Incongruous room",]$mrange, paired = FALSE)
-
-
-fig.range <- results_tblrange %>% 
-  group_by(subject,condition) %>%
-  summarise(mrange  = mean(range,na.rm=TRUE),
-            SDrange  = sd(range,na.rm=TRUE)/sqrt(length(range)))  %>%
-  ungroup()%>%
-  ggplot(aes(x = condition, 
-             y = mrange, 
-             colour = condition, 
-             fill = condition,
-             shape = condition)) +
-  geom_point(alpha = 0.4, 
-             position = position_jitterdodge(jitter.width = .3,
-                                             jitter.height = 0,
-                                             dodge.width = 1 )) +
-  geom_violin(alpha=.2)+
-  scale_shape_manual(values=c(17, 23))+
-  geom_abline(slope = 0, 
-              intercept = 0, 
-              alpha = 0.5, 
-              linetype = "dashed") +
-  stat_summary(fun.data = "mean_se", 
-               geom = "point", 
-               alpha = 1,
-               size = 3,
-               position = position_dodge(width = 1.5)) +
-  stat_summary(fun.data = "mean_se", 
-               geom = "linerange",  
-               size=1, 
-               position = position_dodge(width = 1)) +
-  scale_colour_manual(values = cbPalette) + 
-  scale_fill_manual(values = cbPalette) +
-  scale_x_discrete(name="Condition",labels = c("CR","IR"))+
-  scale_y_continuous(name="Range rate",
-                     limits = c(0,6),expand= c(0,0)) +
-  expand_limits(y = c(0.5, 13.5))+
-  # annotate("text", x = 1.5, y = 0.78,  label = "*", size = 5) +
-  # annotate("segment", x = 1, xend = 2, y = 0.75, yend = 0.75, colour = "black", size=.5, alpha=1,)+
-  theme_pubr(base_size = 10, margin = TRUE)+
-  theme(legend.position = "none",axis.text=element_text(size=10))
-fig.range
-
 
 
 # 
@@ -675,17 +608,18 @@ fig.range
 # 
 
 ###Figure 3----
+
 Figure.2 =  ggarrange(Final.Fixed.Plot,
-                      ggarrange(fig.exp+rremove("x.title") ,
-                                fig.intercept+rremove("x.title") ,
-                                fig.signed_bias+rremove("x.title"),
-                                ncol = 3, labels = c("B","C","D")),
+                      ggarrange(fig.exp+rremove("x.title"),
+                                fig.intercept+rremove("x.title"),
+                                fig.signed_bias, 
+                                nrow = 3, labels = c("B", "C", "D")),
                       labels = "A",
-                      ncol = 1, nrow = 2, heights =c(2,1))
+                      nrow = 1, ncol = 2,widths = c(2,1))
 
 Figure.2
 mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "FIGURE2", ".png", sep = '')
-ggsave(mi_nombre_de_archivo, plot = Figure.2, width=10, height=12, units="cm", limitsize=FALSE, dpi=400)
+ggsave(mi_nombre_de_archivo, plot = Figure.2, width=16, height=12, units="cm", limitsize=FALSE, dpi=400)
 
 
 ```
@@ -1174,32 +1108,34 @@ results_tbl_dis_mean_nir = filter(results_tbl_dis, target_distance == 1, conditi
   summarise(Merror = sum(Error)/n())
 results_tbl_dis_mean_nir$condition = "Congruous room"
 
+results_tbl_dis_mean = merge(results_tbl_dis_mean_ir,results_tbl_dis_mean_nir, all = TRUE)
 m.disError <- lm(Merror ~ condition, 
                    data = results_tbl_dis_mean)
 extract_stats(ggcoefstats(m.disError))
 anova(m.disError)
 
-t.test(filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
-       filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
-       paired = FALSE)
-t.test(filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
-       filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
-       paired = FALSE)
+# t.test(filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
+#        filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
+#        paired = FALSE)
+# t.test(filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
+#        filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
+#        paired = FALSE)
+# 
+# 
+# t.test(filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
+#        filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
+#        paired = FALSE)
 
 
-t.test(filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
-       filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
-       paired = FALSE)
-
-
-cbPalette <- c("#E69F00","#CC79A7","#009E73", "#D55E00", "#CC79A7", "#F0E442")
+results_tbl_dis_mean$condition <- factor(results_tbl_dis_mean$condition, levels = c("Congruous room", "Incongruous room"))
+cbPalette <- c("#81D4FA","#009E73","#E0F7FA", "#D55E00", "#CC79A7", "#F0E442")
 fig.error_s <- ggplot(results_tbl_dis_mean, aes(x = condition,
                                         y = Merror*100, color = condition, fill = condition, shape = condition))+
   geom_point(alpha = 0.4,
              position = position_jitterdodge(jitter.width = .3,
                                              jitter.height = 0,
                                              dodge.width = 1 )) +
-  scale_shape_manual(values=c(15, 17, 23))+
+  scale_shape_manual(values=c(23,16))+
   geom_abline(slope = 0, 
               intercept = 0, 
               alpha = 0.5, 
@@ -1215,17 +1151,16 @@ fig.error_s <- ggplot(results_tbl_dis_mean, aes(x = condition,
                position = position_dodge(width = 1)) +
   scale_colour_manual(values = cbPalette) + 
   scale_fill_manual(values = cbPalette) +
-  scale_x_discrete(name="Condition",labels = c("I","NI-CR",
-                                                       "NI-IR"))+
-  scale_y_continuous(name="% Error discrimination",  limits = c(0,140)) +
+  scale_x_discrete(name="Condition",labels = c("Exp.1","Exp.2"))+
+  scale_y_continuous(name="% Error discrimination",  limits = c(0,120)) +
   expand_limits(y = c(0.5, 13.5))+
   ggtitle("Stimuli via speaker")+
   # annotate("text", x = 3.5, y = 106,  label = "**", size = 5) +
   # annotate("segment", x = 3, xend = 4, y = 104, yend = 104, colour = "black", size=.3, alpha=1,)+
-  annotate("text", x = 2, y = 116,  label = "***", size = 5) +
-  annotate("segment", x = 1, xend = 3, y = 114, yend = 114, colour = "black", size=.3, alpha=1,)+
-  annotate("text", x = 2.5, y = 126,  label = "**", size = 5) +
-  annotate("segment", x = 2, xend = 3, y = 124, yend = 124, colour = "black", size=.3, alpha=1,)+
+  annotate("text", x = 1.5, y = 116,  label = "***", size = 5) +
+  annotate("segment", x = 1, xend = 2, y = 114, yend = 114, colour = "black", size=.3, alpha=1,)+
+  # annotate("text", x = 2.5, y = 126,  label = "**", size = 5) +
+  # annotate("segment", x = 2, xend = 3, y = 124, yend = 124, colour = "black", size=.3, alpha=1,)+
   theme_pubr(base_size = 10, margin = TRUE)+
   theme(legend.position = "none",axis.text=element_text(size=8),
         plot.title = element_text(size=11.5,hjust = 0.5,face="bold"))
@@ -1263,7 +1198,7 @@ fig.error_h <- ggplot(results_tbl_dis_mean, aes(x = condition,
              position = position_jitterdodge(jitter.width = .3,
                                              jitter.height = 0,
                                              dodge.width = 1 )) +
-  scale_shape_manual(values=c(15, 17, 25, 23))+
+  scale_shape_manual(values=c(15, 17, 23, 23))+
   geom_abline(slope = 0, 
               intercept = 0, 
               alpha = 0.5, 
@@ -1279,7 +1214,7 @@ fig.error_h <- ggplot(results_tbl_dis_mean, aes(x = condition,
                position = position_dodge(width = 1)) +
   scale_colour_manual(values = cbPalette) + 
   scale_fill_manual(values = cbPalette) +
-  scale_x_discrete(name="Condition",labels = c("I","NI-CR",
+  scale_x_discrete(name="Condition",labels = c("I-CR","NI-CR",
                                                        "NI-IR"))+
   scale_y_continuous(name="% Error discrimination",  limits = c(0,140)) +
   expand_limits(y = c(0.5, 13.5))+
@@ -1301,6 +1236,8 @@ Figure.3 =  ggarrange(fig.error_h,
                       nrow = 2, labels = c("A", "B"))
 
 Figure.3
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "FIGURE3", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot = Figure.3, width=7, height=14, units="cm", limitsize=FALSE, dpi=400)
 
 
 ```
