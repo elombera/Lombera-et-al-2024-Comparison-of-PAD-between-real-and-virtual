@@ -296,9 +296,6 @@ mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "PADINDEXP1", "
 ggsave(mi_nombre_de_archivo, plot = FittedlmPlot1, width=20, height=20, units="cm", limitsize=FALSE, dpi=200)
 
 
-
-
-
 Final.Fixed<-effect(c("log10(target_distance)*condition"), m.Dist)
 Final.Fixed<-as.data.frame(Final.Fixed)
 
@@ -340,17 +337,6 @@ Final.Fixed.Plot <-ggplot(data = Final.Fixed, aes(x = target_distance, y =10^fit
     ###Distance----
 
 results_tbl_EXP2 = filter(results_tbl, perc_dist != 0, condition == "Incongruous room" | condition == "Non-individualized HRTF")
-
-# idx = results_tbl_EXP2$perc_dist == 0
-# results_tbl_EXP2[idx,]$perc_dist = 0.1
-# results_tbl_EXP2$logperc_dist = log10(results_tbl_EXP2$perc_dist)
-# results_tbl_EXP2 = filter(results_tbl, perc_dist != 0, condition == "Incongruous room" | condition == "Non-individualized HRTF")
-
-# subjects_to_remove <- c("S006", "S009", "S013", "S018", "S019", "S024")
-# results_tbl_EXP2 <- results_tbl_EXP2[!(
-#   results_tbl_EXP2$condition == "Incongruous room" &
-#   results_tbl_EXP2$subject %in% subjects_to_remove
-# ), ]
 
 results_tbl_EXP2_pob = results_tbl_EXP2 %>%
   group_by(target_distance,condition) %>%
@@ -398,7 +384,6 @@ Final.Fixed.Plot <-ggplot(data = Final.Fixed, aes(x = target_distance, y =10^fit
              size = 1,alpha =.8,position = position_jitter(width = 0.05),show.legend=FALSE)+
   scale_x_continuous(name="Distance source (m)", limits = c(0,6.3)) +
   scale_y_continuous(name="Perceived distance (m)",   limits = c(0.3,6.3)) +
-  # scale_linetype_manual(values = c("solid","solid","dashed"),labels = cblegend)+
   scale_shape_manual(values=c(17,23,NA,NA), labels = cblegend)+
   scale_linetype_manual(values=c("solid", "solid","dashed","dashed"), labels = cblegend)+
   scale_colour_manual(values = cbPalette, labels = cblegend) + 
@@ -418,22 +403,12 @@ Final.Fixed.Plot
 results_tbl_intercept_EXP2 = filter(results_tbl_bias, condition == "Incongruous room" | condition == "Non-individualized HRTF")
 results_tbl_intercept_EXP2$intercept = 0
 results_tbl_intercept_EXP2$expon = 0
-# 
-# subjects_to_remove <- c("S006", "S009", "S013", "S018", "S019", "S024")
-# results_tbl_intercept_EXP2 <- results_tbl_intercept_EXP2[!(
-#   results_tbl_intercept_EXP2$condition == "Incongruous room" &
-#   results_tbl_intercept_EXP2$subject %in% subjects_to_remove
-# ), ]
-
 
 results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23,24)]
 results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]+coef(m.Dist)$subject[[4]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]
-# results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]+coef(m.Dist)$subject[[4]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]
 
 results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$expon = coef(m.Dist)$subject[[3]][c(1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23,24)]
 results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon = coef(m.Dist)$subject[[3]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]+coef(m.Dist)$subject[[5]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]
-# results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon = coef(m.Dist)$subject[[3]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]+coef(m.Dist)$subject[[5]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]
-
 
 fig.intercept <- results_tbl_intercept_EXP2 %>%
   group_by(subject, condition) %>%
@@ -510,8 +485,6 @@ fig.exp <- results_tbl_intercept_EXP2 %>%
   scale_y_continuous(name="Exponents",breaks=c(0,0.5,1),
                      limits = c(0,1.3),expand= c(0,0)) +
   expand_limits(y = c(0.5, 13.5))+
-  # annotate("text", x = 1.5, y = 1.17,  label = "*", size = 5) +
-  # annotate("segment", x = 1, xend = 2, y = 1.14, yend = 1.14, colour = "black", size=.5, alpha=1,)+
   theme_pubr(base_size = 10, margin = TRUE)+
   theme(legend.position = "none",axis.text=element_text(size=10))
 
@@ -523,12 +496,6 @@ t.test(results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-i
 
     ###Signed bias----
 results_tbl_bias_EXP2 = filter(results_tbl_bias,  condition == "Incongruous room" | condition == "Non-individualized HRTF")
-
-# subjects_to_remove <- c("S006", "S009", "S013", "S018", "S019", "S024")
-# results_tbl_bias_EXP2 <- results_tbl_bias_EXP2[!(
-#   results_tbl_bias_EXP2$condition == "Incongruous room" &
-#   results_tbl_bias_EXP2$subject %in% subjects_to_remove
-# ), ]
 
 fig.signed_bias <- results_tbl_bias_EXP2 %>%
   group_by(subject, condition) %>%
@@ -581,34 +548,6 @@ anov = anova(m.signedBias)
 anov
 
 
-
-# 
-# 
-# f5 =  ggplot(results_tblp, aes(x = condition,y = mrange, colour = condition, fill = condition)) +
-#   geom_pointrange(aes(x=condition, y=mrange, ymin=mrange-SDrange, ymax=mrange+SDrange))+
-#   geom_point(data = results_tblrange, mapping = aes(x = condition,y = range, colour = condition, fill = condition), alpha = .8)+
-#   # geom_line(data = results_tblrange, mapping = aes(x = condition,y = range, group = subject, colour = condition, fill = condition),alpha = 0.3)+
-#   scale_colour_manual(values = cbPalette) + 
-#   scale_fill_manual(values = cbPalette) + 
-#   geom_abline(slope = 0,
-#               intercept = 0,
-#               alpha = 0.5,
-#               linetype = "dashed") +
-#   labs(x = "Condition", 
-#        y = "Range rate") +
-#   # facet_grid(. ~ type) +
-#   # annotate("text", x = 1.5, y = 7,  label = "***", size = 4) +
-#   # annotate("segment", x = 1, xend = 2, y = 6.9, yend = 6.9, colour = "black", size=.5, alpha=1,)+
-#   theme_pubr(base_size = 12, margin = TRUE)+
-#   theme(legend.position = "none")
-# 
-# f5
-# mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "11.Range", ".png", sep = '')
-# ggsave(mi_nombre_de_archivo, plot=f5, width=15, height=10, units="cm", limitsize=FALSE, dpi=600)
-# 
-
-###Figure 3----
-
 Figure.2 =  ggarrange(Final.Fixed.Plot,
                       ggarrange(fig.exp+rremove("x.title"),
                                 fig.intercept+rremove("x.title"),
@@ -624,7 +563,7 @@ ggsave(mi_nombre_de_archivo, plot = Figure.2, width=16, height=12, units="cm", l
 
 ```
 
-##Experiment 2_SIN
+##Experiment 2 Without Subjects
 
 ```{r Experiment 2_SIN, echo=FALSE}
     ###Distance----
@@ -744,13 +683,10 @@ results_tbl_intercept_EXP2 <- results_tbl_intercept_EXP2[!(
   results_tbl_intercept_EXP2$subject %in% subjects_to_remove
 ), ]
 
-
 results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23,24)]
-# results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]+coef(m.Dist)$subject[[4]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]
 results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$intercept = coef(m.Dist)$subject[[2]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]+coef(m.Dist)$subject[[4]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]
 
 results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Non-individualized HRTF",]$expon = coef(m.Dist)$subject[[3]][c(1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23,24)]
-# results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon = coef(m.Dist)$subject[[3]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]+coef(m.Dist)$subject[[5]][c(1,2,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,21,22,23,24,25)]
 results_tbl_intercept_EXP2[results_tbl_intercept_EXP2$condition == "Incongruous room",]$expon = coef(m.Dist)$subject[[3]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]+coef(m.Dist)$subject[[5]][c(1,2,4,5,7,8,10,11,14,15,16,17,21,22,23,25)]
 
 
@@ -789,8 +725,6 @@ fig.intercept <- results_tbl_intercept_EXP2 %>%
   scale_y_continuous(name="Intercept",breaks=c(-1.5,-1,-0.5, 0,0.5,1),
                      limits = c(-1.2,1.1),expand= c(0,0)) +
   expand_limits(y = c(0.5, 13.5))+
-  # annotate("text", x = 1.5, y = 0.78,  label = "*", size = 5) +
-  # annotate("segment", x = 1, xend = 2, y = 0.75, yend = 0.75, colour = "black", size=.5, alpha=1,)+
   theme_pubr(base_size = 10, margin = TRUE)+
   theme(legend.position = "none",axis.text=element_text(size=10))
 fig.intercept
@@ -884,8 +818,6 @@ fig.signed_bias <- results_tbl_bias_EXP2 %>%
   scale_y_continuous(name="Signed bias",breaks=c(-1.5,-1,-0.5, 0,0.5,1,1.5,2),
                      limits = c(-1,2),expand= c(0,0)) +
   expand_limits(y = c(0.5, 13.5))+
-  # annotate("text", x = 1.5, y = 1.73,  label = "*", size = 5) +
-  # annotate("segment", x = 1, xend = 2, y = 1.7, yend = 1.7, colour = "black", size=.5, alpha=1,)+
   theme_pubr(base_size = 10, margin = TRUE)+
   theme(legend.position = "none",axis.text=element_text(size=10))
 
@@ -942,7 +874,6 @@ temp_dataset$condition <- factor(
 )
 # Transformar target_distance a log10
 
-
 a<-predict(m.Dist,newdata = temp_dataset, re.form = NA)
 # Todos los sujetos
 cbPalette <- c("#009E73", "#0072B2", "black","#999999", "#D55E00", "#CC79A7", "#F0E442")
@@ -968,10 +899,6 @@ FittedlmPlot1 <-ggplot(data = filter(results_tbl_EXP2,condition == "Incongruous 
 FittedlmPlot1
 mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "PADINDEXP2", ".png", sep = '')
 ggsave(mi_nombre_de_archivo, plot = FittedlmPlot1, width=20, height=20, units="cm", limitsize=FALSE, dpi=200)
-
-
-
-
 
 Final.Fixed<-effect(c("log10(target_distance)*condition"), m.Dist)
 Final.Fixed<-as.data.frame(Final.Fixed)
@@ -1012,9 +939,26 @@ Final.Fixed.Plot <-ggplot(data = Final.Fixed, aes(x = target_distance, y =10^fit
 
 ```{r Experiment 1and2 IND, echo=FALSE}
     ###Distance----
-results_tbl_EXP2 = filter(results_tbl, perc_dist != 0, condition == "Incongruous room" | condition == "Non-individualized HRTF")
+results_tbl_EXP2 = filter(results_tbl, condition == "Incongruous room" | condition == "Non-individualized HRTF")
 
+idx = results_tbl_EXP2$perc_dist == 0
+results_tbl_EXP2[idx,]$perc_dist = 0.01
 
+results_tbl_EXP2$WC = "IC" 
+
+subjects_to_remove <- c("S006","S009", "S013", "S018", "S019","S024")
+idx = results_tbl_EXP2$subject == subjects_to_remove[1]
+results_tbl_EXP2[idx,]$WC = "WC"
+idx = results_tbl_EXP2$subject == subjects_to_remove[2]
+results_tbl_EXP2[idx,]$WC = "WC"
+idx = results_tbl_EXP2$subject == subjects_to_remove[3]
+results_tbl_EXP2[idx,]$WC = "WC"
+idx = results_tbl_EXP2$subject == subjects_to_remove[4]
+results_tbl_EXP2[idx,]$WC = "WC"
+idx = results_tbl_EXP2$subject == subjects_to_remove[5]
+results_tbl_EXP2[idx,]$WC = "WC"
+idx = results_tbl_EXP2$subject == subjects_to_remove[6]
+results_tbl_EXP2[idx,]$WC = "WC"
 
 #Log
 m.Dist <-  lmer(log10(perc_dist) ~ log10(target_distance)*condition+(1+log10(target_distance)|subject)+(0+condition|subject),
@@ -1023,20 +967,16 @@ m.Dist <-  lmer(log10(perc_dist) ~ log10(target_distance)*condition+(1+log10(tar
 extract_stats(ggcoefstats(m.Dist))
 r.squaredGLMM(m.Dist)
 anova(m.Dist)
-
 results_tbl_EXP2$Modelfitted3<-predict(m.Dist)
 
 # Todos los sujetos
-cbPalette <- c( "#CC79A7","#009E73", "#0072B2", "black","#999999", "#D55E00", "#F0E442")
-FittedlmPlot1 <-ggplot(data = results_tbl_EXP2, aes(x = target_distance, y = 10^Modelfitted3, group = subject, color = condition,fill = condition))+
-  facet_wrap(condition ~.)+
+cbPalette <- c( "#009E73", "black","#999999", "#D55E00", "#F0E442")
+FittedlmPlot1 <-ggplot(data = filter(results_tbl_EXP2,condition == "Incongruous room") , aes(x = target_distance, y = 10^Modelfitted3, group = subject, color = WC))+
   geom_line()+
-  # geom_point(data = results_tbl_EXP2, aes(x = target_distance, y =perc_dist, group=subject, color = condition,fill = condition), size=3)+
-  #  coord_cartesian(ylim = c(.03,.074))+
   geom_abline(intercept = 0, slope = 1, linetype=3) +
   scale_colour_manual(values = cbPalette) + 
   scale_fill_manual(values = cbPalette) + 
-  xlab("Targent_distance")+ylab("Perceived_distance")+
+  xlab("Distance source (m)")+ylab("Perceived distance (m)")+
   scale_y_log10()+
   scale_x_log10()+
   theme_pubr(base_size = 10, margin = TRUE)+
@@ -1045,48 +985,11 @@ FittedlmPlot1 <-ggplot(data = results_tbl_EXP2, aes(x = target_distance, y = 10^
         panel.grid.minor = element_blank(), 
         legend.title=element_blank(),
         legend.key.size = unit(.1, "cm"),
-        legend.position = "top",
+        legend.position ="none",
         legend.key.width = unit(.9,"cm"))
 FittedlmPlot1
 mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "PADINDEXP1and2", ".png", sep = '')
-ggsave(mi_nombre_de_archivo, plot = FittedlmPlot1, width=15, height=10, units="cm", limitsize=FALSE, dpi=200)
-
-
-
-
-
-Final.Fixed<-effect(c("log10(target_distance)*condition"), m.Dist)
-Final.Fixed<-as.data.frame(Final.Fixed)
-
-cbPalette <- c("#000000","#E69F00","#CC79A7", "#0072B2","#999999","#009E73", "#D55E00", "#CC79A7", "#F0E442")
-cblegend = c(eq_real,eq_ind,eq_noind)
-Final.Fixed.Plot <-ggplot(data = Final.Fixed, aes(x = target_distance, y =10^fit, group=condition))+
-  geom_abline(intercept = 0, slope = 1, linetype=3) +
-  geom_line(aes(color=condition,linetype= condition), size=1.2)+
-  geom_pointrange(data = results_tbl_EXP1_pob, mapping= aes(x = target_distance, y =10^logperc_dist_pob,
-                                                            ymin =10^logperc_dist_pob-sem_respuesta_pob,
-                                                            ymax=10^logperc_dist_pob+sem_respuesta_pob,
-                                                            shape = condition,group=condition, color=condition,fill=condition),
-             size = 1,alpha = .8,position = position_jitter(width = 0.1,seed = 42))+
-
-  scale_x_continuous(name="Distance source (m)",breaks=c(0,2,4,6), limits = c(0.3,6.3)) +
-  scale_y_continuous(name="Perceived distance (m)",breaks=c(0,2,4,6), limits = c(0.3,6.3)) +
-
-  scale_shape_manual(values=c(19, 15, 17, 25), labels = cblegend)+
-  scale_linetype_manual(values=c("solid", "solid", "solid", "solid"), labels = cblegend)+
-  scale_colour_manual(values = cbPalette, labels = cblegend) + 
-  scale_fill_manual(values = cbPalette, labels = cblegend) + 
-  theme_bw()+
-  guides(shape = guide_legend(override.aes = list(size = 1)))+
-  theme_pubr(base_size = 10, margin = TRUE)+
-  theme(text=element_text(size=10),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(), 
-        legend.title=element_blank(),
-        legend.key.size = unit(.1, "cm"),
-        legend.position = c(0.01, .74),
-        legend.justification = c(0,0),
-        legend.key.width = unit(.9,"cm"))
+ggsave(mi_nombre_de_archivo, plot = FittedlmPlot1, width=10, height=10, units="cm", limitsize=FALSE, dpi=200)
 
 ```
 
@@ -1113,19 +1016,6 @@ m.disError <- lm(Merror ~ condition,
                    data = results_tbl_dis_mean)
 extract_stats(ggcoefstats(m.disError))
 anova(m.disError)
-
-# t.test(filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
-#        filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
-#        paired = FALSE)
-# t.test(filter(results_tbl_dis_mean, condition == "Incongruous room")$Merror,
-#        filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
-#        paired = FALSE)
-# 
-# 
-# t.test(filter(results_tbl_dis_mean, condition == "Individualized HRTF")$Merror,
-#        filter(results_tbl_dis_mean, condition == "Non-individualized HRTF")$Merror,
-#        paired = FALSE)
-
 
 results_tbl_dis_mean$condition <- factor(results_tbl_dis_mean$condition, levels = c("Congruous room", "Incongruous room"))
 cbPalette <- c("#81D4FA","#009E73","#E0F7FA", "#D55E00", "#CC79A7", "#F0E442")
@@ -1155,12 +1045,8 @@ fig.error_s <- ggplot(results_tbl_dis_mean, aes(x = condition,
   scale_y_continuous(name="% Error discrimination",  limits = c(0,120)) +
   expand_limits(y = c(0.5, 13.5))+
   ggtitle("Stimuli via speaker")+
-  # annotate("text", x = 3.5, y = 106,  label = "**", size = 5) +
-  # annotate("segment", x = 3, xend = 4, y = 104, yend = 104, colour = "black", size=.3, alpha=1,)+
   annotate("text", x = 1.5, y = 116,  label = "***", size = 5) +
   annotate("segment", x = 1, xend = 2, y = 114, yend = 114, colour = "black", size=.3, alpha=1,)+
-  # annotate("text", x = 2.5, y = 126,  label = "**", size = 5) +
-  # annotate("segment", x = 2, xend = 3, y = 124, yend = 124, colour = "black", size=.3, alpha=1,)+
   theme_pubr(base_size = 10, margin = TRUE)+
   theme(legend.position = "none",axis.text=element_text(size=8),
         plot.title = element_text(size=11.5,hjust = 0.5,face="bold"))
@@ -1219,12 +1105,8 @@ fig.error_h <- ggplot(results_tbl_dis_mean, aes(x = condition,
   scale_y_continuous(name="% Error discrimination",  limits = c(0,140)) +
   expand_limits(y = c(0.5, 13.5))+
   ggtitle("Stimuli via headphones")+
-  # annotate("text", x = 2.5, y = 106,  label = "***", size = 5) +
-  # annotate("segment", x = 2, xend = 3, y = 104, yend = 104, colour = "black", size=.3, alpha=1,)+
   annotate("text", x = 2, y = 126,  label = "**", size = 5) +
   annotate("segment", x = 1, xend = 3, y = 124, yend = 124, colour = "black", size=.3, alpha=1,)+
-  # annotate("text", x = 2, y = 116,  label = "**", size = 5) +
-  # annotate("segment", x = 1, xend = 3, y = 114, yend = 114, colour = "black", size=.3, alpha=1,)+
   annotate("text", x = 2.5, y = 136,  label = "*", size = 5) +
   annotate("segment", x = 2, xend = 3, y = 134, yend = 134, colour = "black", size=.3, alpha=1,)+
   theme_pubr(base_size = 10, margin = TRUE)+
@@ -1240,63 +1122,4 @@ mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "FIGURE3", ".pn
 ggsave(mi_nombre_de_archivo, plot = Figure.3, width=7, height=14, units="cm", limitsize=FALSE, dpi=400)
 
 
-```
-
-# Range
-
-```{r Range, echo=FALSE}
-results_tbl_EXP1 = filter(results_tbl, condition != "Closed headphones")
-# results_tbl_EXP2 = filter(results_tbl, condition == "Incongruous room" | condition == "Non-individualized HRTF")
-
-a1 <- filter(results_tbl_EXP1, target_distance == 6| target_distance == 1)%>%
-  group_by(subject,condition,target_distance) %>%
-  summarise(perc_dist = perc_dist)%>%
-  ungroup()
-
-a6 = a1[a1$target_distance == 6,]
-a6 = rename(a6, c(perc_dist6 = "perc_dist"))
-a6 = rename(a6, c(target_distance6 = "target_distance"))
-
-a2 = a1[a1$target_distance == 1,]
-a2 = rename(a2, c(perc_dist1 ="perc_dist"))
-a2 = rename(a2, c(target_distance1 = "target_distance"))
-results_tblrange  = merge(x = a2, y = a6, all.x = TRUE)
-results_tblrange$range = results_tblrange$perc_dist6 -  results_tblrange$perc_dist1 
-
-results_tblp <- results_tblrange %>% 
-  group_by(condition) %>%
-  summarise(mrange  = mean(range,na.rm=TRUE),
-            SDrange  = sd(range,na.rm=TRUE)/sqrt(length(range)))  %>%
-  ungroup()
-
-cbPalette <- c("#000000","#E69F00","#CC79A7","#009E73","#999999","#009E73", "#D55E00", "#CC79A7", "#F0E442")
-
-f5 =  ggplot(results_tblp, aes(x = condition,y = mrange, colour = condition, fill = condition)) +
-  geom_pointrange(aes(x=condition, y=mrange, ymin=mrange-SDrange, ymax=mrange+SDrange))+
-  geom_point(data = results_tblrange, mapping = aes(x = condition,y = range, colour = condition, fill = condition), alpha = .8)+
-  # geom_line(data = results_tblrange, mapping = aes(x = condition,y = range, group = subject, colour = condition, fill = condition),alpha = 0.3)+
-  scale_colour_manual(values = cbPalette) + 
-  scale_fill_manual(values = cbPalette) + 
-  geom_abline(slope = 0,
-              intercept = 0,
-              alpha = 0.5,
-              linetype = "dashed") +
-  labs(x = "Condition", 
-       y = "Range rate") +
-  # facet_grid(. ~ type) +
-  # annotate("text", x = 1.5, y = 7,  label = "***", size = 4) +
-  # annotate("segment", x = 1, xend = 2, y = 6.9, yend = 6.9, colour = "black", size=.5, alpha=1,)+
-  theme_pubr(base_size = 12, margin = TRUE)+
-  theme(legend.position = "none")
-
-f5
-mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "11.Range", ".png", sep = '')
-ggsave(mi_nombre_de_archivo, plot=f5, width=15, height=10, units="cm", limitsize=FALSE, dpi=600)
-
-# NORMAL
-m.RangeRate <- lm(range ~ condition, 
-                    data = filter(results_tblrange, type == "NORMAL"))
-extract_stats(ggcoefstats(m.RangeRate))
-anov = anova(m.RangeRate)
-anov
 ```
